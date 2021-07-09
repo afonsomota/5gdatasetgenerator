@@ -1,7 +1,7 @@
 # Dataset generator for wireless mobile networks
 
 
-Currently this is a placeholder for the code of the dataset generator and the example dataset generator. Files are currently being sorted and organized for publishing.
+Currently this is a placeholder for the code of the dataset generator and the example dataset generator. Files are currently being sorted and organized for publishing. Still exploring options for the generated dataset upload. The SNR traces, which have 1ms granularity occupy more than 150GB.
 
 If the paper is accepted, the code will be uploaded to Zenodo or similar platform so that it receives a DOI.
 
