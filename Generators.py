@@ -832,7 +832,7 @@ if __name__ == '__main__':
     if chosen_mode is not None and mode != chosen_mode:
       continue
     print("Mode:", mode)
-    gen_configuration = Configurations.get_default_configuration(mode=mode, out_folder=f"traffic-traces-{mode}-fix")
+    gen_configuration = Configurations.get_default_configuration(mode=mode, out_folder=f"traffic-traces-{mode}")
     if start_ts_min is not None:
       gen_configuration["trace_filter"] = (start_ts_min, start_ts_max)
     gen_configuration["overwrite"] = True
