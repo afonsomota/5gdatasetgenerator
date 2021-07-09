@@ -571,6 +571,7 @@ if __name__ == '__main__':
   bfile = '~/sumo_simulations/small-berlin/osm.poly.xml'
   center = [1080.0, 892.0]
   out="small-berlin-long-out"
+  nBS = 7
 
   if len(sys.argv) > 1:
     bfile = sys.argv[1]
@@ -580,6 +581,8 @@ if __name__ == '__main__':
     center = [xc, yc]
   if len(sys.argv) > 4:
     out = sys.argv[4]
+  if len(sys.argv) > 5:
+    nBS = int(sys.argv[5])
 
-  sim = Simulation(step=10, nBS=7, bmp=(bfile, center), out=out)
+  sim = Simulation(step=10, nBS=nBS, bmp=(bfile, center), out=out)
   sim.run()

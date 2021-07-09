@@ -107,7 +107,7 @@ class OfflineVideo(Generator):
         t = self.last_time - start_stamp
     return (self.times, self.sizes), ([], [])
 
-  def generate_video(self, video_type=None, conf_dir="youtube_traces"):
+  def generate_video(self, video_type=None, conf_dir="youtube/youtube_traces"):
     if video_type is None:
       p = Path(conf_dir, "*.cnf")
       files = glob.glob(str(p))
@@ -551,9 +551,9 @@ def generate_traffic(config, traffic_types, occurrences=None, vehicle_df=None, t
       traffic_instance = type_obj['class'](config=traffic_config)
     (times_down, sizes_down), (times_up, sizes_up) = trim_excess(traffic_instance.generate_all(max_t=timeout), timeout)
     total_times_down += list(np.array(times_down) + t_start)
-    total_sizes_down += list(np.array(sizes_down) + t_start)
+    total_sizes_down += list(np.array(sizes_down))
     total_times_up += list(np.array(times_up) + t_start)
-    total_sizes_up += list(np.array(sizes_up) + t_start)
+    total_sizes_up += list(np.array(sizes_up))
 
   return (total_times_down, total_sizes_down), (total_times_up, total_sizes_up)
 
@@ -575,7 +575,7 @@ def generate_data(config, only_static_snr=False):
   print("Number of static", number_of_static)
   for i in range(number_of_static):
     sw.tick("static-snr-whole")
-    node_id = f"sta{i}"
+    node_id = f"sta{i}v1"
     filename = f"trace-0.0-sta{i}-static-v1-static-0-snr.parquet.gz"
     output_path = str(Path(config["trace_folder"], filename))
     if os.path.exists(output_path) and not config.get("overwrite", True):
@@ -618,6 +618,7 @@ def generate_data(config, only_static_snr=False):
       'Node': node_id,
       'X': x,
       'Y': y,
+      'Cell': new_static_node['snr_obj']['cell'],
       'SNR': new_static_node['snr_obj']['snr']
     }, ignore_index=True)
     compression = 'gzip'
@@ -634,14 +635,15 @@ def generate_data(config, only_static_snr=False):
     print(i, sw.show_and_clear())
 
   compression = 'gzip'
-  static_positions_df.to_parquet("static_positions.parquet", compression=compression, index=False)
+  static_positions_df.to_parquet(Path(config["trace_folder"], "static_positions.parquet"), compression=compression, index=False)
 
   if only_static_snr:
     return
 
   sw = DebuggerStopwatch()
   parquet_snr_files = glob.glob(str(Path(config["trace_folder"], "trace-0.0-sta*-snr.parquet.gz")))
-  static_positions = json.load(open(Path(config["trace_folder"], "static-positions.json"),"r"))
+  # static_positions_df = pd.read_parquet(Path(config["trace_folder"], "static_positions.parquet"))
+  static_positions_df = static_positions_df.set_index('Node')
   i = 0
   for f_path in parquet_snr_files:
     output_filename = f"trace-0.0-sta{i}-static-v1-static-0-traffic.parquet.gz"
@@ -658,7 +660,7 @@ def generate_data(config, only_static_snr=False):
     (total_times_down, total_sizes_down), (total_times_up, total_sizes_up) = generate_traffic(config, traffic_types)
     sw.tick("static-traffic-processing")
     sw.tick("static-traffic-filling")
-    cell = static_positions[node_id]["Cell"]
+    cell = static_positions_df.loc[node_id,"Cell"]
     static_traffic_df = static_traffic_df.append(pd.DataFrame(
       {
         'Time': total_times_down,
@@ -820,7 +822,7 @@ if __name__ == '__main__':
   chosen_mode = None
   start_ts_min = None
   start_ts_max = None
-  only_static_snr = True
+  only_static_snr = False 
   if len(sys.argv) > 1:
     chosen_mode = sys.argv[1]
     assert chosen_mode in Configurations.scenarios, "Unresgistered scenario."
@@ -832,7 +834,7 @@ if __name__ == '__main__':
     if chosen_mode is not None and mode != chosen_mode:
       continue
     print("Mode:", mode)
-    gen_configuration = Configurations.get_default_configuration(mode=mode, out_folder=f"traffic-traces-{mode}")
+    gen_configuration = Configurations.get_default_configuration(mode=mode, static=0.00001, out_folder=f"traffic-traces-{mode}")
     if start_ts_min is not None:
       gen_configuration["trace_filter"] = (start_ts_min, start_ts_max)
     gen_configuration["overwrite"] = True

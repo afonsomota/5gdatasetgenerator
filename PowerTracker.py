@@ -38,6 +38,8 @@ class PowerTracker:
     f.close()
     self.absent_counter = 5
     self.channel = channel
+    self.to_write_df = pd.DataFrame()
+    self.first_csv_chunk = True
 
   def parseFile(self, count=0):
     # TODO too many files opened
@@ -168,7 +170,9 @@ class PowerTracker:
 
     return fe_time
 
-  def save_to_normal_csv(self, filename, node_id, sinr_entries, time_values, sumo_ts, t_start, is_first):
+
+  # If having memmory issues you can save chunks to CSV (parquet does not allow appends)
+  def save_to_csv(self, filename, node_id, sinr_entries, time_values, sumo_ts, t_start, is_final=False):
     #print("Saving to csv", filename)
     entries = []
     columns = ["Time", "X", "Y", "SNR", "Cell", "Node"]
@@ -184,10 +188,33 @@ class PowerTracker:
       ]
       entries.append(entry)
     df = pd.DataFrame(entries, columns=columns).set_index("Time")
-    if is_first:
+    if self.first_csv_chunk:
       df.to_csv(filename, compression='gzip')
+      self.first_csv_chunk = False
     else:
-      df.to_csv(filename, compression='gzip', header=False, mode='a')
+      df.to_csv(filename, compression='gzip', header=False, mode='a', index=False)
+
+
+  def save_to_parquet(self, filename, node_id, sinr_entries, time_values, sumo_ts, t_start, is_final=False):
+    #print("Saving to csv", filename)
+    entries = []
+    columns = ["Time", "X", "Y", "SNR", "Cell", "Node"]
+    for k in sinr_entries:
+      t_ref = Util.reference_time(k, sumo_ts, t_start)
+      entry = [
+        k,
+        time_values[t_ref]['x'],
+        time_values[t_ref]['y'],
+        sinr_entries[k] + time_values[t_ref]['snr'],
+        time_values[t_ref]['cell'],
+        node_id
+      ]
+      entries.append(entry)
+    df = pd.DataFrame(entries, columns=columns)
+    self.to_write_df = self.to_write_df.append(df, ignore_index=True)
+    if is_final:
+      self.to_write_df.to_parquet(filename, compression='gzip')
+      self.to_write_df = pd.DataFrame()
 
   def create_channels(
       self,
@@ -225,9 +252,8 @@ class PowerTracker:
     sinr_entries = OrderedDict()
     time_values = OrderedDict()
     last_t = None
-    is_first = True
     if output_f_name is None:
-      filename = ".".join(file_name.split(".")[:-1]) + "-snr" + ".csv.gz"
+      filename = ".".join(file_name.split(".")[:-1]) + "-snr" + ".parquet.gz"
     else:
       filename = output_f_name
     f_name = Path(file_name).stem
@@ -299,8 +325,7 @@ class PowerTracker:
             )
           # Create new file
           if len(sinr_entries)*(fading_ts/0.001) > trace_min:
-            self.save_to_normal_csv(filename, node_id, sinr_entries, time_values, sumo_ts, t_start, is_first)
-            is_first = False
+            self.save_to_parquet(filename, node_id, sinr_entries, time_values, sumo_ts, t_start)
             # f = open(output_f_name(file_number), "w")
             # print(
             #   "Time",
@@ -317,7 +342,7 @@ class PowerTracker:
             #   file=f
             # )
             # for k in sinr_entries:
-            #   save_to_normal_csv(self, filename, node_id, sinr_entries, time_values, sumo_ts, t_start, is_first)
+            #   save_to_parquet(self, filename, node_id, sinr_entries, time_values, sumo_ts, t_start)
             #   t_ref = Util.reference_time(k, sumo_ts, t_start)
             #   print(
             #     k,
@@ -415,8 +440,7 @@ class PowerTracker:
     )
     # Create new file
     if len(sinr_entries) > trace_min:
-      self.save_to_normal_csv(filename, node_id, sinr_entries, time_values, sumo_ts, t_start, is_first)
-      is_first = False
+      self.save_to_parquet(filename, node_id, sinr_entries, time_values, sumo_ts, t_start, is_final=True)
       # f = open(output_f_name(file_number), "w")
       # print(
       #   "Time",
@@ -459,11 +483,13 @@ if __name__ == '__main__':
   if len(sys.argv) > 1:
     inp = sys.argv[1]
     out = sys.argv[2]
-    min_t = float(sys.argv[3])
-    max_t = float(sys.argv[4])
   else:
     inp = '~/sumo_simulations/small-berlin-long/fcd.xml'
     out = 'small-berlin-long-out'
+  if len(sys.argv) > 3:
+    min_t = float(sys.argv[3])
+    max_t = float(sys.argv[4])
+  else:
     min_t = 0
     max_t = None
   maximum_logs = None
@@ -495,7 +521,7 @@ if __name__ == '__main__':
       continue
     u_id = 0
     for class_key in class_keys:
-      out_f_name = f_name + "-" + class_key + "-" + str(u_id) +  "-snr" + ".csv.gz"
+      out_f_name = f_name + "-" + class_key + "-" + str(u_id) +  "-snr" + ".parquet.gz"
       print(out_f_name)
       sf = 0
       if class_key == "passenger":
