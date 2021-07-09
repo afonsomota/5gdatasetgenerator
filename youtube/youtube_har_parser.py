@@ -11,7 +11,7 @@ import scipy.stats
 
 if __name__ == '__main__':
 
-  names_dir = 'C:\\Users\\Afonso\\Downloads\\'
+  names_dir = '<HAR_FILES_DIR>'
   out_dir = 'youtube_traces'
 
   if len(sys.argv) > 1:
