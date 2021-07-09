@@ -10,7 +10,7 @@ from ast import literal_eval
 
 from pathlib import Path
 
-from Util_sinr import Util
+from Util_map import Util
 from Medium import Simulation, SNRCalculator, UE, ENB, Medium, channel_params, MPFadingModel
 
 class PowerTracker:

@@ -7,7 +7,7 @@ import pickle
 import os
 from Medium import *
 import random
-from Util_sinr import Util
+from Util_map import Util
 import pandas as pd
 
 import Configurations

@@ -7,7 +7,7 @@ import scipy
 import xml.etree.ElementTree as ET
 import os
 
-from Util_sinr import Util
+from Util_map import Util
 
 channel_params = {
   'UMa_A': {
