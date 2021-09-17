@@ -38,5 +38,6 @@ The input configurations for the traffic generator (including the node trace fol
 
 ## Generated datasets
 
-Individual: [IEEE Dataport]{https://dx.doi.org/10.21227/4zdn-qe46}
-Aggregated: [Zenodo]{https://doi.org/10.5281/zenodo.5513705}
+Individual: [IEEE Dataport](https://dx.doi.org/10.21227/4zdn-qe46)
+
+Aggregated: [Zenodo](https://doi.org/10.5281/zenodo.5513705)
